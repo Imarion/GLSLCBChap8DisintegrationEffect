@@ -238,8 +238,8 @@ void MyWindow::render()
             desintegrating = true;
         }
 
-        qDebug() << "HighThreshold  " << HighThreshold;
-        qDebug() << "EvolvingVal    " << EvolvingVal;
+//        qDebug() << "HighThreshold  " << HighThreshold;
+//        qDebug() << "EvolvingVal    " << EvolvingVal;
 
     }
 
