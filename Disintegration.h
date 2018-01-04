@@ -66,6 +66,11 @@ private:
     VBOPlane *mPlane;
     QMatrix4x4 ModelMatrixTeapot, ModelMatrixPlane, ViewMatrix, ProjectionMatrix;
 
+    bool     animate        = false;
+    bool     desintegrating = false;
+    float    LowThreshold   = 0.45f;
+    float    HighThreshold  = 0.55f;
+
     //debug
     void printMatrix(const QMatrix4x4& mat);
 };

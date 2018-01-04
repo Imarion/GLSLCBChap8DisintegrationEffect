@@ -219,8 +219,29 @@ void MyWindow::render()
     angle += 0.25f * deltaT;
     if (angle > TwoPI) angle -= TwoPI;
 
-    static float EvolvingVal = 0;
-    EvolvingVal += 0.1f;
+    static float EvolvingVal = 0.0005f;
+    //EvolvingVal += 0.1f;
+
+    if (animate == true)
+    {
+        HighThreshold += EvolvingVal;
+        LowThreshold  -= EvolvingVal;
+
+        if ((HighThreshold <= 0.55f) && (desintegrating == true))
+        {
+            EvolvingVal    = 0.0005f;
+            desintegrating = false;
+        }
+        else if ((HighThreshold >= 0.80f) && (desintegrating == false))
+        {
+            EvolvingVal    = -0.0005f;
+            desintegrating = true;
+        }
+
+        qDebug() << "HighThreshold  " << HighThreshold;
+        qDebug() << "EvolvingVal    " << EvolvingVal;
+
+    }
 
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -254,8 +275,8 @@ void MyWindow::render()
 
         mProgram->setUniformValue("Tex1", 0);
 
-        mProgram->setUniformValue("LowThreshold", 0.45f);
-        mProgram->setUniformValue("HighThreshold", 0.65f);
+        mProgram->setUniformValue("LowThreshold",  LowThreshold);
+        mProgram->setUniformValue("HighThreshold", HighThreshold);
 
         glDrawElements(GL_TRIANGLES, 6 * mTeapot->getnFaces(), GL_UNSIGNED_INT, ((GLubyte *)NULL + (0)));
 
@@ -287,8 +308,8 @@ void MyWindow::render()
         mProgram->setUniformValue("NormalMatrix", mv1.normalMatrix());
         mProgram->setUniformValue("MVP", ProjectionMatrix * mv1);
 
-        mProgram->setUniformValue("LowThreshold", 0.01f);
-        mProgram->setUniformValue("HighThreshold", 0.99f);
+        mProgram->setUniformValue("LowThreshold", 0.0f);
+        mProgram->setUniformValue("HighThreshold", 1.0f);
 
         glDrawElements(GL_TRIANGLES, 6 * mPlane->getnFaces(), GL_UNSIGNED_INT, ((GLubyte *)NULL + (0)));
 
@@ -432,6 +453,7 @@ void MyWindow::keyPressEvent(QKeyEvent *keyEvent)
         case Qt::Key_S:
             break;
         case Qt::Key_D:
+            animate = !animate;
             break;
         case Qt::Key_A:
             break;
