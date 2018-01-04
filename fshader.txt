@@ -2,6 +2,12 @@
 
 in vec4 Position;
 in vec3 Normal;
+in vec2 Texcoord;
+
+uniform float LowThreshold;
+uniform float HighThreshold;
+
+layout (binding=0) uniform sampler2D Tex1;
 
 struct LightInfo {
     vec4 Position;  // Light position in eye coords
@@ -41,6 +47,13 @@ vec3 phongModel( vec4 position, vec3 normal ) {
 
 void main()
 {
+    vec4 noise = texture(Tex1, Texcoord);
+
+    if ((noise.a < LowThreshold) || (noise.a > HighThreshold))
+    {
+        discard;
+    }
+
     //FragColor = vec4 (1.0, 1.0, 0.0, 1.0);
     if( gl_FrontFacing ) {
         FragColor = vec4(phongModel(Position, Normal), 1.0);

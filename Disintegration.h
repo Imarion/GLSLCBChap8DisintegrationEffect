@@ -37,7 +37,8 @@ private:
     void modCurTime();
 
     void initShaders();
-    void CreateVertexBuffer();    
+    void CreateVertexBuffer();
+    void GenerateTexture(float baseFreq, float persistence, int w, int h, bool periodic);
     void initMatrices();
 
     void PrepareTexture(GLenum TextureTarget, const QString& FileName, GLuint& TexObject, bool flip);

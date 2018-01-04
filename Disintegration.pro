@@ -8,6 +8,8 @@ CONFIG -= app_bundle
 
 TEMPLATE = app
 
+INCLUDEPATH += $$PWD/../glm/glm
+
 SOURCES += main.cpp \
     Disintegration.cpp \
     teapot.cpp \

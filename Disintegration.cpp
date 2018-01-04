@@ -11,6 +11,8 @@
 #include <QVector3D>
 #include <QMatrix4x4>
 
+#include <gtc/noise.hpp>
+
 #include <cmath>
 #include <cstring>
 
@@ -76,7 +78,7 @@ void MyWindow::initialize()
     CreateVertexBuffer();
     initShaders();
     initMatrices();
-
+    GenerateTexture(4.0f, 0.5f, 128, 128, true);
     mRotationMatrixLocation = mProgram->uniformLocation("RotationMatrix");
 
     glFrontFace(GL_CCW);
@@ -94,8 +96,8 @@ void MyWindow::CreateVertexBuffer()
     mTeapot = new Teapot(14, transform);
 
     // Create and populate the buffer objects
-    unsigned int TeapotHandles[3];
-    glGenBuffers(3, TeapotHandles);
+    unsigned int TeapotHandles[4];
+    glGenBuffers(4, TeapotHandles);
 
     glBindBuffer(GL_ARRAY_BUFFER, TeapotHandles[0]);
     glBufferData(GL_ARRAY_BUFFER, (3 * mTeapot->getnVerts()) * sizeof(float), mTeapot->getv(), GL_STATIC_DRAW);
@@ -103,7 +105,10 @@ void MyWindow::CreateVertexBuffer()
     glBindBuffer(GL_ARRAY_BUFFER, TeapotHandles[1]);
     glBufferData(GL_ARRAY_BUFFER, (3 * mTeapot->getnVerts()) * sizeof(float), mTeapot->getn(), GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, TeapotHandles[2]);
+    glBindBuffer(GL_ARRAY_BUFFER, TeapotHandles[2]);
+    glBufferData(GL_ARRAY_BUFFER, (2 * mTeapot->getnVerts()) * sizeof(float), mTeapot->gettc(), GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, TeapotHandles[3]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * mTeapot->getnFaces() * sizeof(unsigned int), mTeapot->getelems(), GL_STATIC_DRAW);
 
     // Setup the VAO
@@ -117,8 +122,13 @@ void MyWindow::CreateVertexBuffer()
     mFuncs->glVertexAttribFormat(1, 3, GL_FLOAT, GL_FALSE, 0);
     mFuncs->glVertexAttribBinding(1, 1);
 
+    // Vertex texure coordinates
+    mFuncs->glBindVertexBuffer(2, TeapotHandles[2], 0, sizeof(GLfloat) * 2);
+    mFuncs->glVertexAttribFormat(2, 2, GL_FLOAT, GL_FALSE, 0);
+    mFuncs->glVertexAttribBinding(2, 2);
+
     // Indices
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, TeapotHandles[2]);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, TeapotHandles[3]);
 
     mFuncs->glBindVertexArray(0);
 
@@ -129,8 +139,8 @@ void MyWindow::CreateVertexBuffer()
     mPlane = new VBOPlane(50.0f, 50.0f, 1.0, 1.0);
 
     // Create and populate the buffer objects
-    unsigned int PlaneHandles[3];
-    glGenBuffers(3, PlaneHandles);
+    unsigned int PlaneHandles[4];
+    glGenBuffers(4, PlaneHandles);
 
     glBindBuffer(GL_ARRAY_BUFFER, PlaneHandles[0]);
     glBufferData(GL_ARRAY_BUFFER, (3 * mPlane->getnVerts()) * sizeof(float), mPlane->getv(), GL_STATIC_DRAW);
@@ -138,7 +148,10 @@ void MyWindow::CreateVertexBuffer()
     glBindBuffer(GL_ARRAY_BUFFER, PlaneHandles[1]);
     glBufferData(GL_ARRAY_BUFFER, (3 * mPlane->getnVerts()) * sizeof(float), mPlane->getn(), GL_STATIC_DRAW);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, PlaneHandles[2]);
+    glBindBuffer(GL_ARRAY_BUFFER, PlaneHandles[2]);
+    glBufferData(GL_ARRAY_BUFFER, (2 * mPlane->getnVerts()) * sizeof(float), mPlane->gettc(), GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, PlaneHandles[3]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * mPlane->getnFaces() * sizeof(unsigned int), mPlane->getelems(), GL_STATIC_DRAW);
 
     // Setup the VAO
@@ -152,8 +165,13 @@ void MyWindow::CreateVertexBuffer()
     mFuncs->glVertexAttribFormat(1, 3, GL_FLOAT, GL_FALSE, 0);
     mFuncs->glVertexAttribBinding(1, 1);
 
+    // Vertex texure coordinates
+    mFuncs->glBindVertexBuffer(2, PlaneHandles[2], 0, sizeof(GLfloat) * 2);
+    mFuncs->glVertexAttribFormat(2, 2, GL_FLOAT, GL_FALSE, 0);
+    mFuncs->glVertexAttribBinding(2, 2);
+
     // Indices
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, PlaneHandles[2]);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, PlaneHandles[3]);
 
     mFuncs->glBindVertexArray(0);
 
@@ -217,6 +235,7 @@ void MyWindow::render()
 
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
 
     mProgram->bind();
     {
@@ -233,10 +252,16 @@ void MyWindow::render()
         mProgram->setUniformValue("NormalMatrix", mv1.normalMatrix());
         mProgram->setUniformValue("MVP", ProjectionMatrix * mv1);
 
+        mProgram->setUniformValue("Tex1", 0);
+
+        mProgram->setUniformValue("LowThreshold", 0.45f);
+        mProgram->setUniformValue("HighThreshold", 0.65f);
+
         glDrawElements(GL_TRIANGLES, 6 * mTeapot->getnFaces(), GL_UNSIGNED_INT, ((GLubyte *)NULL + (0)));
 
         glDisableVertexAttribArray(0);
         glDisableVertexAttribArray(1);
+        glDisableVertexAttribArray(2);
     }
     mProgram->release();
 
@@ -245,6 +270,7 @@ void MyWindow::render()
 
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
 
     mProgram->bind();
     {
@@ -261,16 +287,20 @@ void MyWindow::render()
         mProgram->setUniformValue("NormalMatrix", mv1.normalMatrix());
         mProgram->setUniformValue("MVP", ProjectionMatrix * mv1);
 
+        mProgram->setUniformValue("LowThreshold", 0.01f);
+        mProgram->setUniformValue("HighThreshold", 0.99f);
+
         glDrawElements(GL_TRIANGLES, 6 * mPlane->getnFaces(), GL_UNSIGNED_INT, ((GLubyte *)NULL + (0)));
 
         glDisableVertexAttribArray(0);
         glDisableVertexAttribArray(1);
+        glDisableVertexAttribArray(2);
     }
     mProgram->release();
 
 
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
+//    glEnableVertexAttribArray(0);
+//    glEnableVertexAttribArray(1);
 
     mContext->swapBuffers(this);
 }
@@ -299,6 +329,66 @@ void MyWindow::initShaders()
     mProgram->addShader(&vShader);
     mProgram->addShader(&fShader);
     qDebug() << "shader link: " << mProgram->link();
+}
+
+void MyWindow::GenerateTexture(float baseFreq, float persistence, int w, int h, bool periodic)
+{
+    int width = w;
+    int height = h;
+
+    printf("Generating noise texture...");
+
+    GLubyte *data = new GLubyte[ width * height * 4 ];
+
+    float xFactor = 1.0f / (width - 1);
+    float yFactor = 1.0f / (height - 1);
+
+    for( int row = 0; row < height; row++ ) {
+        for( int col = 0 ; col < width; col++ ) {
+            float x = xFactor * col;
+            float y = yFactor * row;
+            float sum = 0.0f;
+            float freq = baseFreq;
+            float persist = persistence;
+            for( int oct = 0; oct < 4; oct++ ) {
+                glm::vec2 p(x * freq, y * freq);
+
+                float val = 0.0f;
+                if (periodic) {
+                  val = glm::perlin(p, glm::vec2(freq)) * persist;
+                } else {
+                  val = glm::perlin(p) * persist;
+                }
+
+                sum += val;
+
+                float result = (sum + 1.0f) / 2.0f;
+
+                // Clamp strictly between 0 and 1
+                result = result > 1.0f ? 1.0f : result;
+                result = result < 0.0f ? 0.0f : result;
+
+                // Store in texture
+                data[((row * width + col) * 4) + oct] = (GLubyte) ( result * 255.0f );
+                freq *= 2.0f;
+                persist *= persistence;
+            }
+        }
+    }
+
+    glActiveTexture(GL_TEXTURE0);
+
+    GLuint TexObject;
+    glGenTextures(1, &TexObject);
+    glBindTexture(GL_TEXTURE_2D, TexObject);
+    mFuncs->glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, width, height);
+    mFuncs->glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_REPEAT);
+
+    delete [] data;
 }
 
 void MyWindow::PrepareTexture(GLenum TextureTarget, const QString& FileName, GLuint& TexObject, bool flip)
