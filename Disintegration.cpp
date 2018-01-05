@@ -78,7 +78,7 @@ void MyWindow::initialize()
     CreateVertexBuffer();
     initShaders();
     initMatrices();
-    GenerateTexture(4.0f, 0.5f, 128, 128, true);
+    GenerateTexture(10.0f, 0.5f, 128, 128, false);
     mRotationMatrixLocation = mProgram->uniformLocation("RotationMatrix");
 
     glFrontFace(GL_CCW);
